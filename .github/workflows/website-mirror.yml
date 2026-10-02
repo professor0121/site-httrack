@@ -1,5 +1,5 @@
 
-name: Website Reference Capture
+name: Website Mirror
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ permissions:
 jobs:
   mirror:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 120
 
     steps:
       - name: Install HTTrack
@@ -22,17 +22,30 @@ jobs:
         run: mkdir -p website-copy
 
       - name: Download authorized public pages
+        timeout-minutes: 100
         run: |
           httrack "https://tractorgyan.com/" \
             -O "./website-copy" \
             "+tractorgyan.com/*" \
             "-*/logout*" \
+            -r3 \
             -v
 
-      - name: Upload website archive
+      - name: Check downloaded files
+        if: always()
+        run: |
+          echo "Checking downloaded files..."
+          find website-copy -type f | head -100
+          echo "Total files:"
+          find website-copy -type f | wc -l
+          echo "Directory size:"
+          du -sh website-copy || true
+
+      - name: Upload website as artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: website-reference
+          name: website-copy
           path: website-copy/
-          retention-days: 7
-          if-no-files-found: error
+          if-no-files-found: warn
+          retention-days: 3
