@@ -1,0 +1,38 @@
+
+name: Website Reference Capture
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Install HTTrack
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y httrack
+
+      - name: Create output directory
+        run: mkdir -p website-copy
+
+      - name: Download authorized public pages
+        run: |
+          httrack "https://tractorgyan.com/" \
+            -O "./website-copy" \
+            "+tractorgyan.com/*" \
+            "-*/logout*" \
+            -v
+
+      - name: Upload website archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-reference
+          path: website-copy/
+          retention-days: 7
+          if-no-files-found: error
