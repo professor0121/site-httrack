@@ -24,9 +24,9 @@ jobs:
       - name: Download authorized public pages
         timeout-minutes: 100
         run: |
-          httrack "https://tractorgyan.com/" \
+          httrack "https://suta.in/" \
             -O "./website-copy" \
-            "+tractorgyan.com/*" \
+            "+suta.in//*" \
             "-*/logout*" \
             -r3 \
             -v
