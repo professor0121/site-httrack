@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: website-mirror
+  cancel-in-progress: false
+
 jobs:
   mirror:
     runs-on: ubuntu-latest
@@ -21,31 +25,54 @@ jobs:
       - name: Create output directory
         run: mkdir -p website-copy
 
-      - name: Download authorized public pages
+      - name: Mirror TheWebTab website
         timeout-minutes: 100
+        continue-on-error: true
         run: |
-          httrack "https://suta.in/" \
-            -O "./website-copy" \
-            "+suta.in//*" \
-            "-*/logout*" \
-            -r3 \
-            -v
+          set -o pipefail
 
-      - name: Check downloaded files
+          httrack "https://www.thewebtab.com/" \
+            -O "./website-copy" \
+            "-*" \
+            "+www.thewebtab.com/*" \
+            "+thewebtab.com/*" \
+            --depth=3 \
+            --sockets=4 \
+            --retries=2 \
+            --timeout=30 \
+            --max-time=6000 \
+            --max-rate=500000 \
+            --connection-per-second=2 \
+            --extended-parsing \
+            --keep-links=0 \
+            --robots \
+            -v 2>&1 | tee website-copy/mirror.log
+
+      - name: Verify downloaded website
         if: always()
         run: |
           echo "Checking downloaded files..."
+
           find website-copy -type f | head -100
+
+          echo ""
           echo "Total files:"
           find website-copy -type f | wc -l
+
+          echo ""
+          echo "HTML files:"
+          find website-copy -type f \
+            \( -iname "*.html" -o -iname "*.htm" \) | head -50
+
+          echo ""
           echo "Directory size:"
           du -sh website-copy || true
 
-      - name: Upload website as artifact
+      - name: Upload website mirror
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: website-copy
+          name: thewebtab-website-copy
           path: website-copy/
           if-no-files-found: warn
           retention-days: 3
